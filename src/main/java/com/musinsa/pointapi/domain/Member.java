@@ -3,9 +3,11 @@ package com.musinsa.pointapi.domain;
 import com.musinsa.pointapi.domain.vo.MemberPointConstraints;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
+@Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Member extends AbstractEntity {
 

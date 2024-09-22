@@ -1,8 +1,11 @@
 package com.musinsa.pointapi.domain;
 
+import com.musinsa.pointapi.domain.vo.PointStatus;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
 
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -21,4 +24,9 @@ public class PointUsage extends AbstractEntity {
     private PointAccumulation accumulation;
 
     private Long usedPoint;
+
+    private LocalDateTime usedDateTime;
+
+    @Enumerated(EnumType.STRING)
+    private PointStatus status;
 }
