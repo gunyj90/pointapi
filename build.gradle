@@ -41,6 +41,7 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation("com.navercorp.fixturemonkey:fixture-monkey-starter:1.0.26")
 }
 
 tasks.named('test') {

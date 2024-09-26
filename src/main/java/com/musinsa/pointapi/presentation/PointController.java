@@ -1,19 +1,13 @@
 package com.musinsa.pointapi.presentation;
 
 import com.musinsa.pointapi.domain.PointAccumulation;
-import com.musinsa.pointapi.dto.PointAccumulationCancelResponse;
-import com.musinsa.pointapi.dto.PointAccumulationRequest;
-import com.musinsa.pointapi.dto.PointAccumulationResponse;
+import com.musinsa.pointapi.domain.PointUsage;
+import com.musinsa.pointapi.presentation.dto.*;
 import com.musinsa.pointapi.service.PointService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Point관리")
 @RestController
@@ -27,14 +21,30 @@ public class PointController {
     @PostMapping("/members/{memberId}/point/accumulation")
     public PointAccumulationResponse accumulate(@PathVariable(name = "memberId") String memberId,
                                                 @RequestBody PointAccumulationRequest request) {
-        PointAccumulation accumulation = pointService.accumulate(memberId, request.toEntity());
+        PointAccumulation accumulation = pointService.accumulate(memberId, request.point());
         return PointAccumulationResponse.from(accumulation);
     }
 
-    @Operation(summary = "포인트 적립취소 API", description = "회원ID와 금액을 받아 포인트를 적립하는 API 입니다.")
-    @DeleteMapping("/point/cancel/{accumulationId}")
-    public PointAccumulationCancelResponse cancel(@PathVariable(name = "accumulationId") Long accumulationId) {
-        Long canceledPoint = pointService.cancel(accumulationId);
-        return new PointAccumulationCancelResponse(canceledPoint);
+    @Operation(summary = "포인트 적립취소 API", description = "적립ID를 받아 적립을 취소하는 API 입니다.")
+    @DeleteMapping("/point/accumulations/{accumulationId}/cancel")
+    public ResultResponse cancelAccumulationById(@PathVariable(name = "accumulationId") Long accumulationId) {
+        pointService.cancelAccumulation(accumulationId);
+        return ResultResponse.success();
+    }
+
+    @Operation(summary = "포인트 사용 API", description = "회원ID와 금액을 받아 포인트를 사용하는 API 입니다.")
+    @PostMapping("/members/{memberId}/point/usage")
+    public PointUsageResponse use(@PathVariable(name = "memberId") String memberId,
+                                  @RequestBody PointUsageRequest request) {
+        PointUsage usage = pointService.use(memberId, request.toEntity());
+        return PointUsageResponse.from(usage);
+    }
+
+    @Operation(summary = "포인트 사용취소 API", description = "사용ID를 받아 사용을 취소하는 API 입니다.")
+    @PatchMapping("/point/usages/{usageId}/cancel")
+    public ResultResponse cancelUsageById(@PathVariable(name = "usageId") Long usageId,
+                                                           @RequestBody CancelRequest request) {
+        pointService.cancelUsage(usageId, request.point());
+        return ResultResponse.success();
     }
 }

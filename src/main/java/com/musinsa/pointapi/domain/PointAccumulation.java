@@ -8,6 +8,11 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.DynamicUpdate;
 
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+
+import static com.musinsa.pointapi.domain.vo.PointStatus.*;
+
 @Entity
 @DynamicUpdate
 @Builder
@@ -21,11 +26,12 @@ public class PointAccumulation extends AbstractEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "member_id", referencedColumnName = "memberId")
-    @Column(updatable = false)
+    @JoinColumn(name = "member_id", referencedColumnName = "memberId", updatable = false)
     private Member member;
 
-    private Long point;
+    private Long originPoint;
+
+    private Long currentPoint;
 
     @Embedded
     @Column(updatable = false)
@@ -38,25 +44,62 @@ public class PointAccumulation extends AbstractEntity {
     @Column(updatable = false)
     private AccumulationType accumulationType;
 
-    public void setMember(Member member) {
+    private PointAccumulation(Long point) {
+        originPoint = point;
+        currentPoint = point;
+        status = ACCUMULATED;
+        accumulationType = AccumulationType.MANUAL;
+    }
+
+    public static PointAccumulation of(Member member, Long point, AvailablePointConstraints constraints) {
+        PointAccumulation accumulation = new PointAccumulation(point);
+        accumulation.setMember(member);
+        accumulation.setDuration(constraints);
+        accumulation.validateAvailablePoint();
+        return accumulation;
+    }
+
+    public static PointAccumulation renew(PointAccumulation old, Long point) {
+        PointAccumulation accumulation = new PointAccumulation(point);
+        accumulation.setMember(old.getMember());
+        accumulation.setDuration(
+                new AvailablePointConstraints(
+                        ChronoUnit.DAYS.between(old.getDuration().getStartDate(), old.getDuration().getEndDate())));
+        return accumulation;
+    }
+
+    public void cancel() {
+        if (!ACCUMULATED.equals(status)) {
+            throw new IllegalStateException("í•´ë‹¹ ì ë¦½ì— ëŒ€í•œ ì‚¬ìš© ì´ë ¥ì´ ìˆê±°ë‚˜ ì´ë¯¸ ì·¨ì†Œë˜ì—ˆìŠµë‹ˆë‹¤.");
+        }
+        status = CANCELED;
+    }
+
+    public boolean isExpired() {
+        return LocalDateTime.now().isAfter(getDuration().getEndDate());
+    }
+
+    public void reduceCurrentPoint(Long pointToUse) {
+        currentPoint -= pointToUse;
+        status = (currentPoint > 0) ? PARTIALLY_USED : USED;
+    }
+
+    public void increaseCurrentPoint(Long point) {
+        currentPoint += point;
+        status = currentPoint.equals(originPoint) ? ACCUMULATED : PARTIALLY_USED;
+    }
+
+    private void setMember(Member member) {
         this.member = member;
     }
 
-    public void setDuration(AvailablePointConstraints constraints) {
+    private void setDuration(AvailablePointConstraints constraints) {
         this.duration = new AvailablePointDuration(constraints);
     }
 
-    public void validateAvailablePoint() {
-        if (member.getMemberPointConstraints().enableToAccumulatePoint(point)) {
-            throw new IllegalStateException("1È¸ Àû¸³ °¡´É Æ÷ÀÎÆ®ÀÇ ¹üÀ§¸¦ ¹ş¾î³µ½À´Ï´Ù.");
+    private void validateAvailablePoint() {
+        if (!member.getMemberPointConstraints().enableToAccumulatePoint(currentPoint)) {
+            throw new IllegalStateException("1íšŒ ì ë¦½ê°€ëŠ¥ í¬ì¸íŠ¸ ë²”ìœ„ë¥¼ ë²—ì–´ë‚¬ìŠµë‹ˆë‹¤.");
         }
-    }
-
-    public PointAccumulation cancel() {
-        if (!PointStatus.ACCUMULATED.equals(status)) {
-            throw new IllegalStateException("±â»ç¿ë µÈ Àû¸³Æ÷ÀÎÆ®ÀÔ´Ï´Ù.");
-        }
-        status = PointStatus.CANCELED;
-        return this;
     }
 }
