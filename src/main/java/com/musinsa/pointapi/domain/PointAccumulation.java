@@ -44,6 +44,9 @@ public class PointAccumulation extends AbstractEntity {
     @Column(updatable = false)
     private AccumulationType accumulationType;
 
+    @Version
+    private Long version;
+
     private PointAccumulation(Long point) {
         originPoint = point;
         currentPoint = point;
@@ -52,7 +55,7 @@ public class PointAccumulation extends AbstractEntity {
     }
 
     public static PointAccumulation of(Member member, Long point, AvailablePointConstraints constraints) {
-        PointAccumulation accumulation = new PointAccumulation(point);
+        var accumulation = new PointAccumulation(point);
         accumulation.setMember(member);
         accumulation.setDuration(constraints);
         accumulation.validateAvailablePoint();
@@ -60,7 +63,7 @@ public class PointAccumulation extends AbstractEntity {
     }
 
     public static PointAccumulation renew(PointAccumulation old, Long point) {
-        PointAccumulation accumulation = new PointAccumulation(point);
+        var accumulation = new PointAccumulation(point);
         accumulation.setMember(old.getMember());
         accumulation.setDuration(
                 new AvailablePointConstraints(
@@ -94,12 +97,15 @@ public class PointAccumulation extends AbstractEntity {
     }
 
     private void setDuration(AvailablePointConstraints constraints) {
+        if (constraints.getDuration() <= 0 || constraints.getDuration() >= 365 * 5) {
+            throw new IllegalStateException("포인트 유효기간은 1일 이상, 5년 미만 입니다.");
+        }
         this.duration = new AvailablePointDuration(constraints);
     }
 
     private void validateAvailablePoint() {
-        if (!member.getMemberPointConstraints().enableToAccumulatePoint(currentPoint)) {
-            throw new IllegalStateException("1회 적립가능 포인트 범위를 벗어났습니다.");
+        if (!member.enableToAccumulatePoint(currentPoint)) {
+            throw new IllegalStateException("적립가능 포인트 범위를 벗어났습니다.");
         }
     }
 }

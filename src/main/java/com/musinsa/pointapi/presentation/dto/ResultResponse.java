@@ -1,9 +1,18 @@
 package com.musinsa.pointapi.presentation.dto;
 
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Getter;
+import org.springframework.hateoas.RepresentationModel;
 
+@Getter
 @Builder
-public record ResultResponse(String code, String message) {
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+public class ResultResponse extends RepresentationModel<ResultResponse> {
+
+    private final String code;
+    private final String message;
 
     private static final String SUCCESS_CODE = "200";
     private static final String FAILURE_CODE = "500";

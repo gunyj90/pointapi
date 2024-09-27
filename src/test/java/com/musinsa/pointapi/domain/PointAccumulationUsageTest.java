@@ -1,6 +1,7 @@
 package com.musinsa.pointapi.domain;
 
 import com.musinsa.pointapi.GivenUtils;
+import net.jqwik.api.Arbitraries;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -74,7 +75,12 @@ class PointAccumulationUsageTest {
     @Test
     void 포인트를_사용하면_부분사용포인트와_원본부분사용포인트는_같다() {
         //given
-        PointAccumulationUsage accumulationUsage = GivenUtils.create(PointAccumulationUsage.class).sample();
+        PointAccumulationUsage accumulationUsage = GivenUtils.create(PointAccumulationUsage.class)
+                .setNotNull("accumulationUsages")
+                .set("accumulation.currentPoint", Arbitraries.longs().between(0,9999999))
+                .set("partiallyUsedPoint", Arbitraries.longs().between(0,9999999))
+                .set("originPartiallyUsedPoint", Arbitraries.longs().between(0,9999999))
+                .sample();
 
         //when
         accumulationUsage.useAccumulationPoint(30L);
@@ -88,6 +94,9 @@ class PointAccumulationUsageTest {
         //given
         PointAccumulationUsage accumulationUsage = GivenUtils.create(PointAccumulationUsage.class)
                 .set("partiallyUsedPoint", 30L)
+                .setNotNull("accumulation")
+                .set("accumulation.currentPoint", Arbitraries.longs().between(0, 999999))
+                .set("accumulation.originPoint", Arbitraries.longs().between(0, 999999))
                 .sample();
 
         //when
@@ -104,6 +113,9 @@ class PointAccumulationUsageTest {
     void 부분사용포인트가_0이면_CANCELED상태이다() {
         //given
         PointAccumulationUsage accumulationUsage = GivenUtils.create(PointAccumulationUsage.class)
+                .setNotNull("accumulationUsage")
+                .set("accumulation.currentPoint", Arbitraries.longs().between(0, 999999))
+                .set("accumulation.originPoint", Arbitraries.longs().between(0, 999999))
                 .set("partiallyUsedPoint", 30L)
                 .sample();
 

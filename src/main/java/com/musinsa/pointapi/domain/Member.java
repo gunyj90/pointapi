@@ -2,12 +2,14 @@ package com.musinsa.pointapi.domain;
 
 import com.musinsa.pointapi.domain.vo.MemberPointConstraints;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import org.hibernate.annotations.DynamicUpdate;
 
+@DynamicUpdate
 @Entity
 @Getter
+@Builder
+@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Member extends AbstractEntity {
 
@@ -22,4 +24,21 @@ public class Member extends AbstractEntity {
 
     @Embedded
     private MemberPointConstraints memberPointConstraints;
+
+    @Version
+    private Long version;
+
+    public void modifyInfo(String name, MemberPointConstraints constraints) {
+        this.name = name;
+        memberPointConstraints = constraints;
+    }
+
+    public boolean exceedPointLimit(Long point) {
+        return point > memberPointConstraints.getMaxAccumulatedPoint();
+    }
+
+    public boolean enableToAccumulatePoint(long point) {
+        return memberPointConstraints.getMinAccumulatedPointAtOnce() <= point
+                && point <= memberPointConstraints.getMaxAccumulatedPointAtOnce();
+    }
 }

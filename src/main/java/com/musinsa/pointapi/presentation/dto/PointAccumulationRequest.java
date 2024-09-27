@@ -1,4 +1,6 @@
 package com.musinsa.pointapi.presentation.dto;
 
-public record PointAccumulationRequest(long point) {
+import com.musinsa.pointapi.domain.vo.AvailablePointConstraints;
+
+public record PointAccumulationRequest(long point, AvailablePointConstraints constraints) {
 }

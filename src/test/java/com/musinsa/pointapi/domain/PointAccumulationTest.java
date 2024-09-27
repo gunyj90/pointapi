@@ -40,6 +40,20 @@ class PointAccumulationTest {
     }
 
     @Test
+    void 포인트의_최대_유효일수는_5년_미만이다() {
+        //given
+        Member member = GivenUtils.create(Member.class)
+                .set("memberPointConstraints.minAccumulatedPointAtOnce", 1L)
+                .set("memberPointConstraints.maxAccumulatedPointAtOnce", 999_999L)
+                .sample();
+
+        //when
+        //then
+        Assertions.assertThatThrownBy(() -> PointAccumulation.of(member, 50L, new AvailablePointConstraints(365*5)))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
     void 만료된_적립을_갱신했을때_두_적립의_기간일은_동일하다() {
         //given
         PointAccumulation accumulation = GivenUtils.pointAccumulation(30L, 100L);

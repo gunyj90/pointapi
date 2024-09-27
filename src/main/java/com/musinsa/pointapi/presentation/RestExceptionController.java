@@ -29,7 +29,8 @@ public class RestExceptionController {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ResultResponse> handleCommonExceptions(Exception ex) {
         log.error(ex.getMessage(), ex);
-        return getFailResponseEntity("시스템 오류가 발생하였습니다.");
+        return ResponseEntity.badRequest()
+                .body(ResultResponse.failure());
     }
 
     private ResponseEntity<ResultResponse> getFailResponseEntity(String message) {

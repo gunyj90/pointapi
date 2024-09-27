@@ -2,7 +2,9 @@ package com.musinsa.pointapi.domain;
 
 import com.musinsa.pointapi.domain.vo.PointStatus;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.DynamicUpdate;
 
 @DynamicUpdate
@@ -29,6 +31,9 @@ public class PointAccumulationUsage extends AbstractEntity {
 
     @Enumerated(EnumType.STRING)
     private PointStatus status;
+
+    @Version
+    private Long version;
 
     public PointAccumulationUsage(PointAccumulation accumulation) {
         this.accumulation = accumulation;

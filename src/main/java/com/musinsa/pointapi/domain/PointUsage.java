@@ -7,7 +7,9 @@ import org.hibernate.annotations.DynamicUpdate;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @DynamicUpdate
 @Entity
@@ -34,6 +36,9 @@ public class PointUsage extends AbstractEntity {
 
     @OneToMany(mappedBy = "usage", cascade = CascadeType.ALL, orphanRemoval = true)
     List<PointAccumulationUsage> accumulationUsages = new ArrayList<>();
+
+    @Version
+    private Long version;
 
     public static PointUsage of(String orderId, Long usedPoint) {
         return PointUsage.builder()
@@ -63,12 +68,51 @@ public class PointUsage extends AbstractEntity {
         return usedPoint;
     }
 
-    public PointUsage cancel(Long pointToReverse) {
+    public List<PointAccumulation> cancelAndReturnReaccumulations(Long pointToReverse) {
         if (usedPoint < pointToReverse) {
-            throw new IllegalStateException("사용취소 포인트가 실제 사용 포인트보다 작아야합니다.");
+            throw new IllegalStateException("사용취소 포인트가 실제 사용 포인트보다 작아야합니다. (" + usedPoint + ")");
         }
         usedPoint -= pointToReverse;
         status = usedPoint == 0 ? PointStatus.CANCELED : PointStatus.PARTIALLY_USED;
-        return this;
+        return rollbackAccumulationsAndReturnReaccumulations(pointToReverse);
+    }
+
+    private List<PointAccumulation> rollbackAccumulationsAndReturnReaccumulations(Long totalPointToBeReversed) {
+        Map<PointAccumulation, Long> renewalTarget = new HashMap<>();
+        for (PointAccumulationUsage accumulationUsage : accumulationUsages) {
+            long partiallyReversedPoint = accumulationUsage.calculatePartiallyReversedPoint(totalPointToBeReversed);
+
+            PointAccumulation accumulation = accumulationUsage.getAccumulation();
+            if (accumulation.isExpired()) {
+                renewalTarget.merge(accumulation, partiallyReversedPoint, Long::sum);
+            } else {
+                accumulationUsage.reverseAccumulationPoint(partiallyReversedPoint);
+            }
+            totalPointToBeReversed -= partiallyReversedPoint;
+        }
+
+        return renewalTarget.entrySet()
+                .stream()
+                .map(entry -> PointAccumulation.renew(entry.getKey(), entry.getValue()))
+                .toList();
+    }
+
+    public void use(List<PointAccumulation> accumulations) {
+        long totalPointToBeUsed = usedPoint;
+
+        for (PointAccumulation accumulation : accumulations) {
+            if (totalPointToBeUsed <= 0) {
+                break;
+            }
+            var accumulationUsage = new PointAccumulationUsage(accumulation);
+            long partiallyUsedPoint = accumulationUsage.calculatePartiallyUsedPoint(totalPointToBeUsed);
+            accumulationUsage.useAccumulationPoint(partiallyUsedPoint);
+            this.addAccumulationUsage(accumulationUsage);
+            totalPointToBeUsed -= partiallyUsedPoint;
+        }
+
+        if (totalPointToBeUsed > 0) {
+            throw new IllegalStateException("적립된 포인트가 부족합니다.");
+        }
     }
 }

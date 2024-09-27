@@ -1,11 +1,15 @@
 package com.musinsa.pointapi.domain;
 
 import com.musinsa.pointapi.GivenUtils;
+import com.musinsa.pointapi.domain.vo.AvailablePointDuration;
 import com.musinsa.pointapi.domain.vo.PointStatus;
+import net.jqwik.api.Arbitraries;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -50,7 +54,7 @@ class PointUsageTest {
 
         //when
         //then
-        Assertions.assertThatThrownBy(() -> pointUsage.cancel(20L))
+        Assertions.assertThatThrownBy(() -> pointUsage.cancelAndReturnReaccumulations(20L))
                 .isInstanceOf(IllegalStateException.class);
     }
 
@@ -59,10 +63,17 @@ class PointUsageTest {
         //given
         PointUsage pointUsage = GivenUtils.create(PointUsage.class)
                 .set("usedPoint", 10L)
+                .size("accumulationUsages", 2)
+                .set("accumulationUsages[0].partiallyUsedPoint", 3L)
+                .set("accumulationUsages[0].accumulation.duration.endDate", LocalDateTime.now().plusDays(1L))
+                .set("accumulationUsages[0].accumulation.currentPoint", Arbitraries.longs().between(1L, 10L))
+                .set("accumulationUsages[1].partiallyUsedPoint", 7L)
+                .set("accumulationUsages[1].accumulation.duration.endDate", LocalDateTime.now().plusDays(1L))
+                .set("accumulationUsages[1].accumulation.currentPoint", Arbitraries.longs().between(1L, 10L))
                 .sample();
 
         //when
-        pointUsage.cancel(3L);
+        pointUsage.cancelAndReturnReaccumulations(3L);
 
         //then
         assertAll(
@@ -76,12 +87,75 @@ class PointUsageTest {
         //given
         PointUsage pointUsage = GivenUtils.create(PointUsage.class)
                 .set("usedPoint", 10L)
+                .size("accumulationUsages", 2)
+                .set("accumulationUsages[0].partiallyUsedPoint", 3L)
+                .set("accumulationUsages[0].accumulation.duration.endDate", LocalDateTime.now().plusDays(1L))
+                .set("accumulationUsages[0].accumulation.currentPoint", Arbitraries.longs().between(1L, 10L))
+                .set("accumulationUsages[1].partiallyUsedPoint", 7L)
+                .set("accumulationUsages[1].accumulation.duration.endDate", LocalDateTime.now().plusDays(1L))
+                .set("accumulationUsages[1].accumulation.currentPoint", Arbitraries.longs().between(1L, 10L))
                 .sample();
 
         //when
-        pointUsage.cancel(10L);
+        pointUsage.cancelAndReturnReaccumulations(10L);
 
         //then
         Assertions.assertThat(pointUsage.getStatus()).isEqualTo(PointStatus.CANCELED);
+    }
+
+    @Test
+    void 사용취소시_만료된_적립건을_대상으로_재적립_데이터를_반환한다() {
+        PointUsage pointUsage = GivenUtils.create(PointUsage.class)
+                .set("usedPoint", 10L)
+                .size("accumulationUsages", 2)
+                .set("accumulationUsages[0].partiallyUsedPoint", 3L)
+                .set("accumulationUsages[0].accumulation.duration.startDate", LocalDateTime.now().minusDays(2L))
+                .set("accumulationUsages[0].accumulation.duration.endDate", LocalDateTime.now().minusDays(1L))
+                .set("accumulationUsages[0].accumulation.currentPoint", Arbitraries.longs().between(1L, 10L))
+                .set("accumulationUsages[1].partiallyUsedPoint", 7L)
+                .set("accumulationUsages[1].accumulation.duration.startDate", LocalDateTime.now().minusDays(1L))
+                .set("accumulationUsages[1].accumulation.duration.endDate", LocalDateTime.now().plusDays(1L))
+                .set("accumulationUsages[1].accumulation.currentPoint", Arbitraries.longs().between(1L, 10L))
+                .sample();
+
+        //when
+        List<PointAccumulation> reaccumulations = pointUsage.cancelAndReturnReaccumulations(10L);
+
+        //then
+        Assertions.assertThat(reaccumulations.size()).isEqualTo(1);
+    }
+
+    @Test
+    void 재적립_대상은_부분사용금액과_동일하고_유효일수도_동일하다() {
+        long 부분사용금액 = 3L;
+        long 유효일수 = 2L;
+        PointUsage pointUsage = GivenUtils.create(PointUsage.class)
+                .set("usedPoint", 10L)
+                .size("accumulationUsages", 2)
+                .set("accumulationUsages[0].partiallyUsedPoint", 부분사용금액)
+                .set("accumulationUsages[0].accumulation.duration.startDate", LocalDateTime.now().minusDays(유효일수 + 1L))
+                .set("accumulationUsages[0].accumulation.duration.endDate", LocalDateTime.now().minusDays(유효일수 - 1L))
+                .set("accumulationUsages[0].accumulation.currentPoint", Arbitraries.longs().between(1L, 10L))
+                .set("accumulationUsages[1].partiallyUsedPoint", 7L)
+                .set("accumulationUsages[1].accumulation.duration.startDate", LocalDateTime.now().minusDays(1L))
+                .set("accumulationUsages[1].accumulation.duration.endDate", LocalDateTime.now().plusDays(1L))
+                .set("accumulationUsages[1].accumulation.currentPoint", Arbitraries.longs().between(1L, 10L))
+                .sample();
+
+        //when
+        List<PointAccumulation> reaccumulations = pointUsage.cancelAndReturnReaccumulations(10L);
+
+        //then
+        assertAll(
+                () -> {Assertions.assertThat(reaccumulations.getFirst().getCurrentPoint()).isEqualTo(부분사용금액);},
+                () -> {Assertions.assertThat(reaccumulations.getFirst().getOriginPoint()).isEqualTo(부분사용금액);},
+                () -> {
+                    AvailablePointDuration duration = reaccumulations.getFirst().getDuration();
+                    long dur = ChronoUnit.DAYS.between(duration.getStartDate(), duration.getEndDate());
+                    Assertions.assertThat(dur).isEqualTo(유효일수);
+                    }
+
+        );
+
     }
 }

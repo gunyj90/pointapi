@@ -13,6 +13,7 @@ public interface PointUsageRepository extends JpaRepository<PointUsage, Long> {
             "join fetch au.accumulation a " +
             "join fetch a.member " +
             "where u.id = :id " +
-            "and au.status in (com.musinsa.pointapi.domain.vo.PointStatus.USED, com.musinsa.pointapi.domain.vo.PointStatus.PARTIALLY_USED)")
+            "and au.status in (com.musinsa.pointapi.domain.vo.PointStatus.USED, com.musinsa.pointapi.domain.vo.PointStatus.PARTIALLY_USED) " +
+            "order by au.id")
     Optional<PointUsage> findToCancel(Long id);
 }

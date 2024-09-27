@@ -1,1 +1,1 @@
-insert into member (id,member_id,name,max_accumulated_point,min_accumulated_point_at_once,max_accumulated_point_at_once,created_at,updated_at) values ('1','member1','john',9999999,1,100000,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);
+insert into member (id,member_id,name,max_accumulated_point,min_accumulated_point_at_once,max_accumulated_point_at_once,created_at,updated_at,version) values ('0','member1','john',9999999,1,100000,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,0);

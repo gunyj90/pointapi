@@ -16,4 +16,10 @@ public interface PointAccumulationRepository extends JpaRepository<PointAccumula
             "and current_timestamp between a.duration.startDate and a.duration.endDate " +
             "order by a.accumulationType, a.duration.endDate")
     List<PointAccumulation> findToBeUsed(@Param("member") Member member);
+
+    @Query("select nvl(sum(a.currentPoint),0) from PointAccumulation a " +
+            "where a.member = :member " +
+            "and a.status in (com.musinsa.pointapi.domain.vo.PointStatus.ACCUMULATED, com.musinsa.pointapi.domain.vo.PointStatus.PARTIALLY_USED) " +
+            "and current_timestamp between a.duration.startDate and a.duration.endDate ")
+    Long summarizePointAccumulated(@Param("member") Member member);
 }

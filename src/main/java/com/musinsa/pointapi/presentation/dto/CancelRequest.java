@@ -1,3 +1,4 @@
 package com.musinsa.pointapi.presentation.dto;
 
-public record CancelRequest(Long point) {}
+public record CancelRequest(Long point) {
+}
